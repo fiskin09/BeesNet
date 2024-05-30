@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emplois - BizNet</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0; /* Gray background for the page */
+            color: #000;
+        }
+
+        .header {
+            background-image: url('images/imageback.jpg');
+            background-size: cover;
+            background-position: center;
+            padding: 50px 0;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-family: 'Lobster', sans-serif;
+            color: #000000;
+            margin: 0;
+            font-size: 3em; /* Increase the font size of "Emplois" */
+        }
+
+        nav {
+            background-color: #ffbd49;
+            color: black;
+            text-align: center;
+            padding: 10px 0;
+        }
+
+        nav ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        nav ul li {
+            display: inline-block;
+            margin-right: 20px;
+            position: relative;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: black;
+            padding: 10px 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: color 0.7s;
+        }
+
+        nav a img {
+            width: 24px;
+            height: 24px;
+            display: block;
+            transition: opacity 0.7s;
+        }
+
+        nav a span {
+            display: none;
+            margin-top: 5px;
+            transition: opacity 0.7s;
+        }
+
+        nav a:hover span {
+            display: block;
+        }
+
+        .content {
+            padding: 50px;
+            box-sizing: border-box;
+        }
+
+        .theme-links {
+            text-align: center;
+            margin-bottom: 30px;
+            margin-top: -20px; /* Adjust the margin to place the buttons on the gray part */
+        }
+
+        .theme-links a {
+            margin: 0 15px;
+            text-decoration: none;
+            color: #000; /* Black text for the theme links */
+            font-weight: bold;
+            font-size: 1.2em;
+            transition: color 0.3s;
+            padding: 10px 20px;
+            background-color: #ffbd49; /* Yellow background for the links */
+            border-radius: 8px;
+        }
+
+        .theme-links a:hover {
+            color: #e5a937;
+        }
+
+        .job-section {
+            margin-top: 50px;
+            text-align: center;
+        }
+
+        .job-section h2 {
+            font-family: 'Lobster', sans-serif;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .carousel {
+            position: relative;
+            max-width: 70%;
+            margin: 0 auto;
+            padding: 20px 0;
+            background-color: #ffbd49; /* Yellow background for the carousels */
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .carousel-slide {
+            display: none;
+        }
+
+        .carousel-slide.active {
+            display: block;
+        }
+
+        .carousel-image {
+            width: 200px;
+            height: 200px;
+            margin: 0 50px;
+            opacity: 0.9;
+            transition: all 0.5s ease;
+        }
+
+        .carousel-image.center {
+            width: 250px;
+            height: 250px;
+            opacity: 1;
+            filter: none;
+        }
+
+        .carousel-image:not(.center) {
+            filter: blur(1px);
+        }
+
+        .job-details {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        button.prev, button.next {
+            cursor: pointer;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: gray;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 24px;
+            border-radius: 50%;
+            transition: background-color 0.5s;
+        }
+
+        button.prev {
+            left: 0;
+        }
+
+        button.next {
+            right: 0;
+        }
+
+        button:hover {
+            background-color: #E5E7E9;
+        }
+
+        .footer {
+            background-color: #ffbd49;
+            color: black;
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 20px;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+
+        .footer-content div {
+            flex: 1;
+            padding: 10px;
+            min-width: 200px;
+        }
+
+        .footer-content h3 {
+            margin-top: 0;
+            color: black;
+        }
+
+        .footer a {
+            color: black;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .social-icons ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .social-icons li {
+            margin: 5px 0;
+        }
+
+        .social-icons a {
+            text-decoration: none;
+            color: black;
+        }
+
+        .social-icons i {
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Barre de navigation -->
+    <nav>
+        <ul>
+            <li><a href="index.html"><img src="images/home.png" alt="Accueil"><span>Accueil</span></a></li>
+            <li><a href="mon-reseau.html"><img src="images/network.png" alt="Mon Réseau"><span>Mon Réseau</span></a></li>
+            <li class="nav-vous"><a href="profil.html"><img id="nav-vous-icon" src="images/user.png" alt="Vous"><span id="nav-vous-text">Vous</span></a></li>
+            <li><a href="notifications.html"><img src="images/notifications.png" alt="Notifications"><span>Notifications</span></a></li>
+            <li><a href="messagerie.html"><img src="images/messages.png" alt="Messagerie"><span>Messagerie</span></a></li>
+            <li><a href="emplois.html"><img src="images/jobs.png" alt="Emplois"><span>Emplois</span></a></li>
+        </ul>
+    </nav>
+
+    <!-- Header -->
+    <div class="header">
+        <h1>Emplois</h1>
+    </div>
+
+    <!-- Contenu principal -->
+    <div class="content">
+        <div class="theme-links">
+            <a href="#tech">Technologie</a>
+            <a href="#business">Business</a>
+            <a href="#design">Design</a>
+        </div>
+
+        <div id="tech" class="job-section">
+            <h2>Technologie</h2>
+            <div class="carousel">
+                <button class="prev">&#10094;</button>
+                <div class="carousel-slide active">
+                    <img src="images/tech1.jpg" alt="Professeur Informatique" class="carousel-image center">
+                    <div class="job-details">
+                        <h3>Professeur Informatique</h3>
+                        <p>Période: 6 mois</p>
+                        <p>Rémunération: 3000€/mois</p>
+                        <p>Possibilité d'embauche: Oui</p>
+                    </div>
+                </div>
+                <div class="carousel-slide">
+                    <img src="images/tech2.jpg" alt="Stage Développeur" class="carousel-image">
+                    <div class="job-details">
+                        <h3>Stage Développeur</h3>
+                        <p>Période: 6 mois</p>
+                        <p>Rémunération: 1000€/mois</p>
+                        <p>Possibilité d'embauche: Non</p>
+                    </div>
+                </div>
+                <div class="carousel-slide">
+                    <img src="images/tech3.jpg" alt="Apprentissage Cyber Sécurité" class="carousel-image">
+                    <div class="job-details">
+                        <h3>Apprentissage Cyber Sécurité</h3>
+                        <p>Période: 12 mois</p>
+                        <p>Rémunération: 1500€/mois</p>
+                        <p>Possibilité d'embauche: Oui</p>
+                    </div>
+                </div>
+                <button class="next">&#10095;</button>
+            </div>
+        </div>
+
+        <div id="business" class="job-section">
+            <h2>Business</h2>
+            <div class="carousel">
+                <button class="prev">&#10094;</button>
+                <div class="carousel-slide active">
+                    <img src="images/business1.jpg" alt="Manager de Projet" class="carousel-image center">
+                    <div class="job-details">
+                        <h3>Manager de Projet</h3>
+                        <p>Période: 12 mois</p>
+                        <p>Rémunération: 5000€/mois</p>
+                        <p>Possibilité d'embauche: Oui</p>
+                    </div>
+                </div>
+                <div class="carousel-slide">
+                    <img src="images/business2.jpg" alt="Stage Marketing" class="carousel-image">
+                    <div class="job-details">
+                        <h3>Stage Marketing</h3>
+                        <p>Période: 6 mois</p>
+                        <p>Rémunération: 800€/mois</p>
+                        <p>Possibilité d'embauche: Non</p>
+                    </div>
+                </div>
+                <div class="carousel-slide">
+                    <img src="images/business3.jpg" alt="Apprentissage Comptabilité" class="carousel-image">
+                    <div class="job-details">
+                        <h3>Apprentissage Comptabilité</h3>
+                        <p>Période: 12 mois</p>
+                        <p>Rémunération: 1200€/mois</p>
+                        <p>Possibilité d'embauche: Oui</p>
+                    </div>
+                </div>
+                <button class="next">&#10095;</button>
+            </div>
+        </div>
+
+        <div id="design" class="job-section">
+            <h2>Design</h2>
+            <div class="carousel">
+                <button class="prev">&#10094;</button>
+                <div class="carousel-slide active">
+                    <img src="images/design1.jpg" alt="Graphiste" class="carousel-image center">
+                    <div class="job-details">
+                        <h3>Graphiste</h3>
+                        <p>Période: 6 mois</p>
+                        <p>Rémunération: 2500€/mois</p>
+                        <p>Possibilité d'embauche: Oui</p>
+                    </div>
+                </div>
+                <div class="carousel-slide">
+                    <img src="images/design2.jpg" alt="Stage Designer" class="carousel-image">
+                    <div class="job-details">
+                        <h3>Stage Designer</h3>
+                        <p>Période: 6 mois</p>
+                        <p>Rémunération: 900€/mois</p>
+                        <p>Possibilité d'embauche: Non</p>
+                    </div>
+                </div>
+                <div class="carousel-slide">
+                    <img src="images/design3.jpg" alt="Apprentissage UX/UI" class="carousel-image">
+                    <div class="job-details">
+                        <h3>Apprentissage UX/UI</h3>
+                        <p>Période: 12 mois</p>
+                        <p>Rémunération: 1300€/mois</p>
+                        <p>Possibilité d'embauche: Oui</p>
+                    </div>
+                </div>
+                <button class="next">&#10095;</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pied de page -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="contact-info">
+                <h3>Contactez-nous</h3>
+                <p>Email: <a href="mailto:info@ecein.com">info@ecein.com</a></p>
+                <p>Téléphone: +33 1 23 45 67 89</p>
+                <p>Adresse: 10 Rue de l'Exemple, 75001 Paris, France</p>
+            </div>
+            <div class="navigation-links">
+                <h3>Liens Utiles</h3>
+                <ul>
+                    <li><a href="index.html">Accueil</a></li>
+                    <li><a href="mon-reseau.html">Mon Réseau</a></li>
+                    <li><a href="profil.html">Vous</a></li>
+                    <li><a href="notifications.html">Notifications</a></li>
+                    <li><a href="messagerie.html">Messagerie</a></li>
+                    <li><a href="emplois.html">Emplois</a></li>
+                </ul>
+            </div>
+            <div class="social-icons">
+                <h3>Suivez-nous</h3>
+                <ul>
+                    <li><a href="#">@BeesNetReal<i class="fa fa-facebook"></i></a></li>
+                    <li><a href="#">@BeesNetOfficial<i class="fa fa-twitter"></i></a></li>
+                    <li><a href="#">@BeesNetPro<i class="fa fa-linkedin"></i></a></li>
+                    <li><a href="#">@TheBeesNet<i class="fa fa-instagram"></i></a></li>
+                </ul>
+            </div>
+        </div>
+        <p>&copy; 2024 BeesNet. Tous droits réservés.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const carousels = document.querySelectorAll('.carousel');
+            carousels.forEach(carousel => {
+                const slides = carousel.querySelectorAll('.carousel-slide');
+                let currentSlide = 0;
+                const nextButton = carousel.querySelector('.next');
+                const prevButton = carousel.querySelector('.prev');
+
+                function showSlides() {
+                    slides.forEach((slide, index) => {
+                        slide.classList.remove('active');
+                        if (index === currentSlide) {
+                            slide.classList.add('active');
+                        }
+                    });
+                }
+
+                nextButton.addEventListener('click', () => {
+                    currentSlide = (currentSlide + 1) % slides.length;
+                    showSlides();
+                });
+
+                prevButton.addEventListener('click', () => {
+                    currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+                    showSlides();
+                });
+
+                showSlides(); // Initial call to set the first slide
+            });
+        });
+    </script>
+</body>
+</html>
