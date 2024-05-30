@@ -1,0 +1,374 @@
+<?php
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header('Location: connexion.php');
+    exit;
+}
+
+$conn = new mysqli('localhost', 'root', '', 'beeznet');
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+$friendRequests = [];
+$notifications = [];
+
+// Accepter ou décliner une demande d'ami
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && isset($_POST['sender_id'])) {
+    $action = $_POST['action'];
+    $sender_id = $_POST['sender_id'];
+    $receiver_id = $_SESSION['user_id'];
+
+    // Préparation de la requête SQL en fonction de l'action
+    if ($action == 'accept') {
+        $stmt = $conn->prepare("UPDATE FriendRequests SET status = 'accepted' WHERE sender_id = ? AND receiver_id = ?");
+        $notification_msg = "a accepté votre demande d'ami";
+    } elseif ($action == 'decline') {
+        $stmt = $conn->prepare("DELETE FROM FriendRequests WHERE sender_id = ? AND receiver_id = ?");
+        $notification_msg = "a refusé votre demande d'ami";
+    }
+    $stmt->bind_param("ii", $sender_id, $receiver_id);
+    $stmt->execute();
+    $stmt->close();
+
+    // Récupérer le nom d'utilisateur de l'utilisateur actuel (qui accepte ou refuse)
+    $stmt = $conn->prepare("SELECT username FROM Comptes WHERE id = ?");
+    $stmt->bind_param("i", $receiver_id);
+    $stmt->execute();
+    $stmt->bind_result($receiver_username);
+    $stmt->fetch();
+    $stmt->close();
+
+    // Création du message de notification avec le nom de l'utilisateur actuel
+    $notification_msg = "$receiver_username $notification_msg";
+    
+    // Enregistrer la notification pour l'expéditeur de la demande d'ami
+    $stmt = $conn->prepare("INSERT INTO Notifications (user_id, message) VALUES (?, ?)");
+    $stmt->bind_param("is", $sender_id, $notification_msg);
+    $stmt->execute();
+    $stmt->close();
+}
+
+// Envoi de message
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['message']) && isset($_POST['receiver_id'])) {
+    $message = $_POST['message'];
+    $sender_id = $_SESSION['user_id'];
+    $receiver_id = $_POST['receiver_id'];
+    
+    // Enregistrer le message
+    $stmt = $conn->prepare("INSERT INTO Messages (sender_id, receiver_id, message) VALUES (?, ?, ?)");
+    $stmt->bind_param("iis", $sender_id, $receiver_id, $message);
+    $stmt->execute();
+    $stmt->close();
+
+    // Enregistrer la notification pour le destinataire du message
+    $stmt = $conn->prepare("SELECT username FROM Comptes WHERE id = ?");
+    $stmt->bind_param("i", $sender_id);
+    $stmt->execute();
+    $stmt->bind_result($sender_username);
+    $stmt->fetch();
+    $stmt->close();
+
+    $notification_msg = "$sender_username vous a envoyé un message";
+    $stmt = $conn->prepare("INSERT INTO Notifications (user_id, message) VALUES (?, ?)");
+    $stmt->bind_param("is", $receiver_id, $notification_msg);
+    $stmt->execute();
+    $stmt->close();
+}
+
+// Récupération des demandes d'amis reçues
+$stmt = $conn->prepare("SELECT f.sender_id, c.username FROM FriendRequests f JOIN Comptes c ON f.sender_id = c.id WHERE f.receiver_id = ? AND f.status = 'pending'");
+$stmt->bind_param("i", $_SESSION['user_id']);
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $friendRequests[] = $row;
+}
+$stmt->close();
+
+// Récupération des notifications
+$stmt = $conn->prepare("
+    SELECT n.message, c.username AS sender_name 
+    FROM Notifications n 
+    JOIN Comptes c ON n.user_id = c.id 
+    WHERE n.user_id = ? AND n.is_read = FALSE
+");
+$stmt->bind_param("i", $_SESSION['user_id']);
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $notifications[] = $row;
+}
+$stmt->close();
+
+// Marquer les notifications comme lues
+$stmt = $conn->prepare("UPDATE Notifications SET is_read = TRUE WHERE user_id = ?");
+$stmt->bind_param("i", $_SESSION['user_id']);
+$stmt->execute();
+$stmt->close();
+
+$conn->close();
+?>
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BizNet - Notifications</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: Oswald, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #ffbd49;
+        }
+        header, section, footer, nav {
+            background-color: #FFFFFF;
+            color: #ffbd49;
+            max-width: auto;
+            margin: 0px auto;
+            padding: 10px;
+            background: #E5E7E9;
+            text-align: center;
+        }
+
+        button.prev, button.next {
+            cursor: pointer;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: gray;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 24px;
+            border-radius: 50%;
+            transition: background-color 0.5s;
+        }
+        button.prev {
+            left: 0;
+        }
+        button.next {
+            right: 0;
+        }
+        button:hover {
+            background-color: #E5E7E9;
+        }
+        h1, h2 {
+            font-family: 'Lobster', sans-serif;
+        }
+        h1 {
+            background-image: url('images/imageback.jpg');
+            background-size: 30%;
+            background-position: center;
+            background-repeat: repeat;
+            color: black;
+            height: auto;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        p, li {
+            color: #000000;
+            list-style-type: none;
+        }
+        nav {
+            background-color: #ffbd49;
+            color: black;
+            text-align: center;
+            padding: 10px 0;
+        }
+        nav ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        nav ul li {
+            display: inline-block;
+            margin-right: 20px;
+            position: relative;
+        }
+        nav a {
+            text-decoration: none;
+            color: black;
+            padding: 10px 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        nav a img {
+            width: 24px;
+            height: 24px;
+            display: block;
+            transition: opacity 0.3s;
+        }
+        nav a span {
+            display: none;
+            margin-top: 5px;
+            transition: opacity 0.3s;
+        }
+        nav a:hover span {
+            display: block;
+        }
+        footer {
+            background-color: #ffbd49;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+        }
+        footer .footer-content {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+        footer .footer-content div {
+            flex: 1;
+            padding: 10px;
+            min-width: 200px;
+        }
+        footer a {
+            color: black;
+            text-decoration: none;
+        }
+        footer a:hover {
+            text-decoration: underline;
+        }
+        .social-icons a {
+            margin: 0 10px;
+            color: black;
+            font-size: 20px;
+        }
+        .event-highlight {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ffbd49;
+            transition: all 0.3s ease;
+        }
+        .friend-request, .notification {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+        .friend-request button {
+            padding: 5px 10px;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+        .accept-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .accept-btn:hover {
+            background-color: #45a049;
+        }
+        .decline-btn {
+            background-color: #f44336;
+            color: white;
+        }
+        .decline-btn:hover {
+            background-color: #da190b;
+        }
+    </style>
+</head>
+<body>
+    <!-- Barre de navigation -->
+    <nav>
+        <ul>
+            <li><a href="index.php"><img src="images/home.png" alt="Accueil"><span>Accueil</span></a></li>
+            <li><a href="reseau.php"><img src="images/network.png" alt="Mon Réseau"><span>Mon Réseau</span></a></li>
+            <li><a href="vous.html"><img src="images/user.png" alt="Vous"><span>Vous</span></a></li>
+            <li><a href="notifications.php"><img src="images/notifications.png" alt="Notifications"><span>Notifications</span></a></li>
+            <li><a href="messagerie.php"><img src="images/messages.png" alt="Messagerie"><span>Messagerie</span></a></li>
+            <li><a href="emplois.html"><img src="images/jobs.png" alt="Emplois"><span>Emplois</span></a></li>
+        </ul>
+    </nav>
+
+    <!-- Section Introduction -->
+    <header>
+        <h1>Notifications</h1>
+    </header>
+
+    <!-- Section principale pour les notifications -->
+    <section>
+        <h2>Vos Notifications</h2>
+        <!-- Contenu des demandes d'amis reçues -->
+        <?php if (!empty($friendRequests)): ?>
+            <ul>
+                <?php foreach ($friendRequests as $request): ?>
+                    <li class="friend-request">
+                        <span><?php echo htmlspecialchars($request['username']); ?> vous a envoyé une demande d'ami.</span>
+                        <div>
+                            <form method="post" style="display: inline;">
+                                <input type="hidden" name="sender_id" value="<?php echo $request['sender_id']; ?>">
+                                <input type="hidden" name="action" value="accept">
+                                <button type="submit" class="accept-btn">Accepter</button>
+                            </form>
+                            <form method="post" style="display: inline;">
+                                <input type="hidden" name="sender_id" value="<?php echo $request['sender_id']; ?>">
+                                <input type="hidden" name="action" value="decline">
+                                <button type="submit" class="decline-btn">Décliner</button>
+                            </form>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php else: ?>
+            <p>Aucune demande d'ami pour le moment.</p>
+        <?php endif; ?>
+
+        <!-- Contenu des notifications -->
+        <?php if (!empty($notifications)): ?>
+            <ul>
+                <?php foreach ($notifications as $notification): ?>
+                    <li class="notification">
+                        <span><?php echo htmlspecialchars($notification['sender_name']); ?> <?php echo htmlspecialchars($notification['message']); ?>.</span>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php else: ?>
+            <p>Aucune notification pour le moment.</p>
+        <?php endif; ?>
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <div class="contact-info">
+                <h3>Contactez-nous</h3>
+                <p>Email: <a href="mailto:info@ecein.com">info@ecein.com</a></p>
+                <p>Téléphone: +33 1 23 45 67 89</p>
+                <p>Adresse: 10 Rue de l'Exemple, 75001 Paris, France</p>
+            </div>
+            <div class="navigation-links">
+                <h3>Liens Utiles</h3>
+                <ul>
+                    <li><a href="index.html">Accueil</a></li>
+                    <li><a href="reseau.php">Mon Réseau</a></li>
+                    <li><a href="vous.html">Vous</a></li>
+                    <li><a href="notifications.html">Notifications</a></li>
+                    <li><a href="messagerie.php">Messagerie</a></li>
+                    <li><a href="emplois.html">Emplois</a></li>
+                </ul>
+            </div>
+            <div class="social-icons">
+                <h3>Suivez-nous</h3>
+                <ul>
+                    <li><a href="#">@BeesNetReal<i class="fa fa-facebook"></i></a></li>
+                    <li><a href="#">@BeesNetOfficial<i class="fa fa-twitter"></i></a></li>
+                    <li><a href="#">@BeesNetPro<i class="fa fa-linkedin"></i></a></li>
+                    <li><a href="#">@TheBeesNet<i class="fa fa-instagram"></i></a></li>
+                </ul>
+            </div>
+        </div>
+        <p>&copy; 2024 BeesNet. Tous droits réservés.</p>
+    </footer>
+</body>
+</html>
