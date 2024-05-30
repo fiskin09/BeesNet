@@ -1,0 +1,212 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Hôte : 127.0.0.1:3306
+-- Généré le : jeu. 30 mai 2024 à 16:29
+-- Version du serveur : 8.2.0
+-- Version de PHP : 8.2.13
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Base de données : `beeznet`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `comptes`
+--
+
+DROP TABLE IF EXISTS `comptes`;
+CREATE TABLE IF NOT EXISTS `comptes` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `username` varchar(20) NOT NULL,
+  `email` varchar(50) NOT NULL,
+  `password` varchar(20) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `username` (`username`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=MyISAM AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Déchargement des données de la table `comptes`
+--
+
+INSERT INTO `comptes` (`id`, `username`, `email`, `password`) VALUES
+(1, 'user1', 'user1@example.com', 'mot_de_passe_hache1'),
+(2, 'user2', 'user2@example.com', 'mot_de_passe_hache2'),
+(3, 'user3', 'user3@example.com', 'mot_de_passe_hache3'),
+(4, 'user4', 'user4@example.com', 'mot_de_passe_hache4'),
+(5, 'user5', 'user5@example.com', 'mot_de_passe_hache5'),
+(6, 'user6', 'user6@example.com', 'mot_de_passe_hache6'),
+(7, 'user7', 'user7@example.com', 'mot_de_passe_hache7'),
+(8, 'user8', 'user8@example.com', 'mot_de_passe_hache8'),
+(9, 'user9', 'user9@example.com', 'mot_de_passe_hache9'),
+(10, 'user10', 'user10@example.com', 'mot_de_passe_hache10');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `friendrequests`
+--
+
+DROP TABLE IF EXISTS `friendrequests`;
+CREATE TABLE IF NOT EXISTS `friendrequests` (
+  `request_id` int NOT NULL AUTO_INCREMENT,
+  `sender_id` int DEFAULT NULL,
+  `receiver_id` int DEFAULT NULL,
+  `status` enum('pending','accepted','declined','blocked') DEFAULT 'pending',
+  `request_date` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`request_id`),
+  KEY `sender_id` (`sender_id`),
+  KEY `receiver_id` (`receiver_id`)
+) ENGINE=MyISAM AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Déchargement des données de la table `friendrequests`
+--
+
+INSERT INTO `friendrequests` (`request_id`, `sender_id`, `receiver_id`, `status`, `request_date`) VALUES
+(24, 2, 1, 'accepted', '2024-05-30 14:45:07'),
+(23, 1, 3, 'accepted', '2024-05-29 18:05:34'),
+(22, 6, 1, 'accepted', '2024-05-29 18:04:54'),
+(21, 2, 3, 'accepted', '2024-05-29 17:59:02'),
+(20, 6, 2, 'accepted', '2024-05-29 17:58:45'),
+(19, 6, 3, 'accepted', '2024-05-29 17:58:38'),
+(26, 2, 4, 'accepted', '2024-05-30 14:50:04'),
+(25, 2, 10, 'pending', '2024-05-30 14:45:17'),
+(27, 2, 5, 'accepted', '2024-05-30 15:03:59'),
+(28, 5, 3, 'accepted', '2024-05-30 15:19:18'),
+(29, 5, 6, 'accepted', '2024-05-30 15:25:06'),
+(30, 5, 4, 'accepted', '2024-05-30 15:28:20');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `messages`
+--
+
+DROP TABLE IF EXISTS `messages`;
+CREATE TABLE IF NOT EXISTS `messages` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `sender_id` int NOT NULL,
+  `receiver_id` int NOT NULL,
+  `message` text NOT NULL,
+  `timestamp` datetime DEFAULT CURRENT_TIMESTAMP,
+  `is_read` tinyint(1) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `sender_id` (`sender_id`),
+  KEY `receiver_id` (`receiver_id`)
+) ENGINE=MyISAM AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Déchargement des données de la table `messages`
+--
+
+INSERT INTO `messages` (`id`, `sender_id`, `receiver_id`, `message`, `timestamp`, `is_read`) VALUES
+(40, 5, 3, 'gdgqesvs', '2024-05-30 17:19:26', 0),
+(39, 5, 3, 'vsvs\r\n', '2024-05-30 17:19:21', 0),
+(38, 2, 5, 'salut pd', '2024-05-30 16:19:04', 1),
+(37, 5, 2, 'salut', '2024-05-30 16:18:37', 1),
+(36, 3, 2, 'sisi', '2024-05-29 18:16:21', 1),
+(35, 2, 3, 'non non', '2024-05-29 18:14:48', 1),
+(34, 3, 2, 'oui oui', '2024-05-29 18:13:32', 1),
+(33, 2, 3, 'reverv', '2024-05-29 18:08:47', 1),
+(32, 2, 6, 'bonjour', '2024-05-29 17:59:13', 0);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `notifications`
+--
+
+DROP TABLE IF EXISTS `notifications`;
+CREATE TABLE IF NOT EXISTS `notifications` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `message` varchar(255) NOT NULL,
+  `is_read` tinyint(1) DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`)
+) ENGINE=MyISAM AUTO_INCREMENT=42 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Déchargement des données de la table `notifications`
+--
+
+INSERT INTO `notifications` (`id`, `user_id`, `message`, `is_read`, `created_at`) VALUES
+(40, 5, ' vous a envoyé un message', 1, '2024-05-30 15:19:21'),
+(39, 2, ' vous a envoyé un message', 0, '2024-05-30 14:19:04'),
+(38, 5, ' vous a envoyé un message', 1, '2024-05-30 14:18:37'),
+(37, 5, 'user4 a accepté votre demande d\'ami', 1, '2024-05-30 13:32:50'),
+(36, 5, 'user6 a accepté votre demande d\'ami', 1, '2024-05-30 13:25:28'),
+(35, 5, 'user3 a accepté votre demande d\'ami', 1, '2024-05-30 13:19:29'),
+(34, 2, 'user5 a accepté votre demande d\'ami', 1, '2024-05-30 13:04:14'),
+(33, 2, 'a accepté votre demande d\'ami', 1, '2024-05-30 12:50:28'),
+(32, 1, 'a accepté votre demande d\'ami', 1, '2024-05-30 12:46:04'),
+(31, 3, ' vous a envoyé un message', 1, '2024-05-29 16:16:21'),
+(30, 2, ' vous a envoyé un message', 1, '2024-05-29 16:14:48'),
+(29, 3, ' vous a envoyé un message', 1, '2024-05-29 16:13:32'),
+(28, 2, ' vous a envoyé un message', 1, '2024-05-29 16:08:47'),
+(27, 6, 'a accepté votre demande d\'ami', 1, '2024-05-29 16:06:13'),
+(26, 2, 'a accepté votre demande d\'ami', 1, '2024-05-29 16:06:12'),
+(23, 2, ' vous a envoyé un message', 1, '2024-05-29 15:59:13'),
+(25, 1, 'a accepté votre demande d\'ami', 1, '2024-05-29 16:06:11'),
+(24, 6, 'a accepté votre demande d\'ami', 1, '2024-05-29 16:05:22'),
+(22, 6, 'a accepté votre demande d\'ami', 1, '2024-05-29 15:58:54'),
+(41, 5, ' vous a envoyé un message', 1, '2024-05-30 15:19:26');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `profils`
+--
+
+DROP TABLE IF EXISTS `profils`;
+CREATE TABLE IF NOT EXISTS `profils` (
+  `user_id` int NOT NULL,
+  `photo` varchar(255) DEFAULT NULL,
+  `nom` varchar(15) DEFAULT NULL,
+  `prenom` varchar(15) DEFAULT NULL,
+  `formations` text,
+  `projets` text,
+  `experiences` text,
+  `etudes_en_cours` varchar(100) DEFAULT NULL,
+  `habitation` varchar(100) DEFAULT NULL,
+  `date_de_naissance` date DEFAULT NULL,
+  `centre_d_interet` text,
+  PRIMARY KEY (`user_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Déchargement des données de la table `profils`
+--
+
+INSERT INTO `profils` (`user_id`, `photo`, `nom`, `prenom`, `formations`, `projets`, `experiences`, `etudes_en_cours`, `habitation`, `date_de_naissance`, `centre_d_interet`) VALUES
+(1, 'uploads/5668.jpg', 'Colin', 'Malo', 'yolo', 'hello\r\n\r\n', 'je suis expert dannds efziozregfergg((((((((((((((((((((((((((((((((((((((((((((((((yo', '', '', NULL, NULL),
+(2, 'uploads/Screenshot_20210711_035922_com.snapchat.android.jpg', 'Colin', 'Malo', 'salut', '- aéronautique\r\n-aérospatial\r\n-ECEBORG', '-travail dans la production de smegma ', '', '', NULL, NULL),
+(3, NULL, 'Nom3', 'Prenom3', NULL, NULL, NULL, 'Informatique', 'Ville', NULL, NULL),
+(4, NULL, 'Nom4', 'Prenom4', NULL, NULL, NULL, 'Informatique', 'Ville', NULL, NULL),
+(5, NULL, 'Nom5', 'Prenom5', NULL, NULL, NULL, 'Informatique', 'Ville', NULL, NULL),
+(6, NULL, 'Nom6', 'Prenom6', NULL, NULL, NULL, 'Informatique', 'Ville', NULL, NULL),
+(7, NULL, 'Nom7', 'Prenom7', NULL, NULL, NULL, 'Informatique', 'Ville', NULL, NULL),
+(8, NULL, 'Nom8', 'Prenom8', NULL, NULL, NULL, 'Informatique', 'Ville', NULL, NULL),
+(9, NULL, 'Nom9', 'Prenom9', NULL, NULL, NULL, 'Informatique', 'Ville', NULL, NULL),
+(10, NULL, 'Nom10', 'Prenom10', NULL, NULL, NULL, 'Informatique', 'Ville', NULL, NULL),
+(23, 'uploads/5668.jpg', '', '', '', '', '', 'cre', 'm', '0000-00-00', '');
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
