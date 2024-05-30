@@ -1,0 +1,120 @@
+<?php
+session_start(); // Démarrage de la session pour suivre l'utilisateur connecté
+$message = '';
+
+// Paramètres de connexion à la base de données
+$conn = new mysqli('localhost', 'root', '', 'beeznet');
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $username = $_POST['username'];
+    $password = $_POST['password']; // Ceci devrait être haché et vérifié
+
+    // Vérification des identifiants
+    $stmt = $conn->prepare("SELECT id FROM Comptes WHERE username = ? AND password = ?");
+    $stmt->bind_param("ss", $username, $password);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        $_SESSION['user_id'] = $result->fetch_assoc()['id'];
+        header("Location: index.php"); // Redirection vers la page d'accueil
+        exit;
+    } else {
+        $message = 'Identifiants incorrects.';
+    }
+    $stmt->close();
+}
+$conn->close();
+?>
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - BizNet</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: Oswald, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #ffbd49;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: #FFFFFF;
+            color: #ffbd49;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 {
+            font-family: 'Lobster', sans-serif;
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            text-align: left;
+        }
+        input[type="text"],
+        input[type="password"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        input[type="submit"] {
+            background-color: #ffbd49;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        input[type="submit"]:hover {
+            background-color: #e5a837;
+        }
+        p {
+            margin-top: 20px;
+        }
+        a {
+            color: #ffbd49;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Connexion</h1>
+    <form method="POST">
+        <label for="username">Nom d'utilisateur:</label>
+        <input type="text" id="username" name="username" required>
+
+        <label for="password">Mot de passe:</label>
+        <input type="password" id="password" name="password" required>
+
+        <input type="submit" value="Se connecter">
+    </form>
+    <?php if ($message !== '') echo "<p>$message</p>"; ?>
+    <p>Vous n'avez pas de compte? <a href="creationcompte.php">Créez votre compte</a></p>
+</div>
+</body>
+</html>
