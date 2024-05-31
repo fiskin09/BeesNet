@@ -1,0 +1,564 @@
+<?php
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header("Location: connexion.php");
+    exit;
+}
+
+// Connexion à la base de données
+$conn = new mysqli('localhost', 'root', '', 'beeznet');
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Gérer la requête AJAX pour envoyer une demande d'ami
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['action'] == 'send_friend_request') {
+    $receiver_id = $_POST['receiver_id'];
+    $sender_id = $_SESSION['user_id'];
+    
+    // Vérifier si la demande existe déjà
+    $checkStmt = $conn->prepare("SELECT * FROM FriendRequests WHERE sender_id = ? AND receiver_id = ?");
+    $checkStmt->bind_param("ii", $sender_id, $receiver_id);
+    $checkStmt->execute();
+    
+    if ($checkStmt->get_result()->num_rows == 0) {
+        $stmt = $conn->prepare("INSERT INTO FriendRequests (sender_id, receiver_id, status) VALUES (?, ?, 'pending')");
+        $stmt->bind_param("ii", $sender_id, $receiver_id);
+        $stmt->execute();
+        $stmt->close();
+        echo json_encode(['status' => 'success']);
+    } else {
+        echo json_encode(['status' => 'already_exists']);
+    }
+    $checkStmt->close();
+    exit;
+}
+
+// Récupération des informations de l'utilisateur
+$stmt = $conn->prepare("SELECT username FROM Comptes WHERE id = ?");
+$stmt->bind_param("i", $_SESSION['user_id']);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+$stmt->close();
+
+// Récupération des posts avec les photos de profil
+$posts = [];
+$post_stmt = $conn->prepare("
+    SELECT p.post_id, p.user_id, p.description, p.image, p.post_date, c.username, 
+           IFNULL(pf.photo, 'uploads/nobody.jpg') AS photo
+    FROM posts p
+    JOIN Comptes c ON p.user_id = c.id
+    LEFT JOIN profils pf ON p.user_id = pf.user_id
+    ORDER BY p.post_date DESC
+");
+$post_stmt->execute();
+$posts_result = $post_stmt->get_result();
+while ($row = $posts_result->fetch_assoc()) {
+    $posts[] = $row;
+}
+$post_stmt->close();
+$conn->close();
+?>
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeesNet - Accueil</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: Oswald, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #ffbd49;
+        }
+        header, section, footer, nav {
+            background-color: #FFFFFF;
+            color: #ffbd49;
+            max-width: auto;
+            margin: 0px auto;
+            padding: 10px;
+            background: #E5E7E9;
+            text-align: center;
+        }
+        body {
+            font-family: Oswald, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #ffbd49; /* Définit la couleur de fond globale */
+            background-image: repeating-linear-gradient(45deg,rgba(0, 0, 0, 0.7) 0, rgba(0, 0, 0, 0.7) 1px,transparent 1px, transparent 4px); /* Ajoute des hachures diagonales noires */
+        }
+        .carousel {
+            position: relative;
+            max-width: auto;
+            margin: 10px auto;
+            padding: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-image: url('images/imageback.jpg');
+            border-radius: 15px 15px 15px 15px; /* haut gauche, haut droit, bas droit, bas gauche */
+            box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1); /* Ombre très légère */
+            background-size: 30%; /* L'image prendra toute la largeur ou la hauteur disponible, tout en conservant ses proportions */
+            width: 70%; /* ou une autre valeur en pourcentage ou en pixels */
+            margin-left: auto; /* pour centrer le titre si nécessaire */
+            margin-right: auto; /* pour centrer le titre si nécessaire */
+            background-position: center; /* L'image sera centrée */
+            background-repeat: repeat; /* L'image ne se répétera pas */
+            height: auto; /* Ajustez cette valeur selon la hauteur souhaitée pour l'élément h1 */
+        }
+        .carousel-image {
+            width: 200px;
+            height: 200px;
+            margin: 0 50px;
+            opacity: 0.9;
+            transition: all 0.5s ease;
+            border-radius: 10%;
+        }
+        .carousel-image.center {
+            width: 250px;
+            height: 250px;
+            opacity: 1;
+            filter: none;
+            border-radius: 25%;
+        }
+        .carousel-image:not(.center) {
+            filter: blur(1px);
+        }
+        button.prev, button.next {
+            cursor: pointer;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: gray;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 24px;
+            border-radius: 50%;
+            transition: background-color 0.5s;
+        }
+        button.prev {
+            left: 0;
+        }
+        button.next {
+            right: 0;
+        }
+        button:hover {
+            background-color: #E5E7E9;
+        }
+        h1, h2 {
+            font-family: 'Lobster', sans-serif;
+        }
+        h1 {
+            background-image: url('images/imageback.jpg');
+            border-radius: 10px 10px 10px 10px; /* haut gauche, haut droit, bas droit, bas gauche */
+            box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.25); /* Ombre modérément légère */
+            background-size: 30%; /* L'image prendra toute la largeur ou la hauteur disponible, tout en conservant ses proportions */
+            background-position: center; /* L'image sera centrée */
+            background-repeat: repeat; /* L'image ne se répétera pas */
+            color: black;
+            height: auto; /* Ajustez cette valeur selon la hauteur souhaitée pour l'élément h1 */
+            margin-top: 10px; /* Réduisez la marge supérieure du h1 */
+            margin-bottom: 10px; /* Réduisez la marge inférieure du h1 */
+        }
+
+        p, li {
+            color: #000000;
+            list-style-type: none;
+        }
+        nav {
+            background-color: #ffbd49;
+            color: black;
+            text-align: center;
+            padding: 10px 0;
+        }
+        nav ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        nav ul li {
+            display: inline-block;
+            margin-right: 20px;
+            position: relative;
+        }
+        nav a {
+            text-decoration: none;
+            color: black;
+            padding: 10px 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        nav a img {
+            width: 24px;
+            height: 24px;
+            display: block;
+            transition: opacity 0.3s;
+        }
+        nav a span {
+            display: none;
+            margin-top: 5px;
+            transition: opacity 0.3s;
+        }
+        nav a:hover span {
+            display: block;
+        }
+        footer {
+            background-color: #ffbd49;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+        }
+        footer .footer-content {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+        footer .footer-content div {
+            flex: 1;
+            padding: 10px;
+            min-width: 200px;
+        }
+        footer a {
+            color: black;
+            text-decoration: none;
+        }
+        footer a:hover {
+            text-decoration: underline;
+        }
+        .social-icons a {
+            margin: 0 10px;
+            color: black;
+            font-size: 20px;
+        }
+        .event-highlight {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #D4AC0D ;
+            transition: all 0.3s ease;
+        }
+        .post-frame {
+            display: flex;
+            justify-content: space-between;
+            background-color: #FFF;
+            border: 2px solid #FFBD49;
+            border-radius: 20px;
+            padding: 10px 20px;
+            margin: 20px auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            position: relative;
+            flex-direction: column;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        .profile-pic {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            border: 2px solid #FFBD49;
+            margin: 0 10px;
+        }
+        .username {
+            font-weight: bold;
+            color: #FFBD49;
+            margin-right: 10px;
+        }
+        .timestamp {
+            color: #999;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        .add-user-btn {
+            background-color: #FFBD49;
+            color: #FFF;
+            border: none;
+            border-radius: 50%;
+            padding: 5px 10px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .post-content {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .post-content img {
+            width: 300px;
+            height: 300px;
+            border-radius: 10px;
+        }
+        .post-description {
+            margin-top: 10px;
+            font-size: 1.5em; /* Taille intermédiaire entre 1em et 2em */
+            color: #333;
+            text-align: center;
+        }
+        .post-content-wrapper {
+            background-color: #E5E7E9;
+            border-radius: 15px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        /* Nouveau style pour le bouton flottant */
+        .floating-button-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            z-index: 1000;
+        }
+        .floating-button {
+            width: 60px;
+            height: 60px;
+            background-color: #E5E7E9;
+            border: 2px solid #ffbd49;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: background-color 0.3s, box-shadow 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .floating-button:hover {
+            background-color: #ffbd49;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .floating-button img {
+            width: 24px;
+            height: 24px;
+        }
+        .floating-button-text {
+            display: none;
+            margin-left: 10px;
+            margin-right: 10px;
+            font-size: 16px;
+            color: #000;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        .floating-button-container:hover .floating-button-text {
+            display: block;
+        }
+        .content {
+            position: relative;
+            padding-bottom: 100px; /* Espace pour le bouton flottant */
+        }
+    </style>
+</head>
+<body>
+    <!-- Barre de navigation -->
+    <nav>
+        <ul>
+            <li><a href="index.php"><img src="images/home.png" alt="Accueil"><span>Accueil</span></a></li>
+            <li><a href="reseau.php"><img src="images/network.png" alt="Mon Réseau"><span>Mon Réseau</span></a></li>
+            <li><a href="profil.php"><img src="images/user.png" alt="Vous"><span>Vous</span></a></li>
+            <li><a href="notifications.php"><img src="images/notifications.png" alt="Notifications"><span>Notifications</span></a></li>
+            <li><a href="messagerie.php"><img src="images/messages.png" alt="Messagerie"><span>Messagerie</span></a></li>
+            <li><a href="emplois.php"><img src="images/jobs.png" alt="Emplois"><span>Emplois</span></a></li>
+        </ul>
+    </nav>
+
+    <!-- Section Introduction -->
+    <header>
+        <h1>Bienvenue sur BeesNet, <?php echo htmlspecialchars($user['username']); ?> !</h1>
+        <p>Connectez-vous avec votre réseau professionnel et découvrez des opportunités.</p>
+        <p>Session active de <?php echo htmlspecialchars($user['username']); ?></p>
+    </header>
+
+    <!-- Carrousel d'images -->
+    <div class="carousel">
+        <button class="prev">&#10094;</button>
+        <img src="images/image1.jpg" alt="Événement 1" class="carousel-image center" data-event="1">
+        <img src="images/image2.jpg" alt="Événement 2" class="carousel-image" data-event="2">
+        <img src="images/image3.jpg" alt="Événement 3" class="carousel-image" data-event="3">
+        <button class="next">&#10095;"></button>
+    </div>
+
+    <!-- Liste des événements de la semaine -->
+    <section>
+        <h2>Événements de la semaine</h2>
+        <ul>
+            <li data-event="1">Exposition sur l'art antique - 5 Juin</li>
+            <li data-event="2">Séminaire sur les cryptomonnaies - 7 Juin</li>
+            <li data-event="3">Team building - 9 Juin</li>
+        </ul>
+    </section>
+
+    <section id="content-section">
+        <!-- Affichage des posts -->
+        <section class="content">
+            <?php foreach ($posts as $post): ?>
+                <div class="post-frame" data-user-id="<?php echo $post['user_id']; ?>">
+                    <div class="user-info">
+                        <span class="username"><?php echo htmlspecialchars($post['username']); ?></span>
+                        <div class="profile-pic" style="background-image: url('<?php echo htmlspecialchars($post['photo']); ?>');"></div>
+                        <span class="timestamp"><?php echo htmlspecialchars($post['post_date']); ?></span>
+                    </div>
+                    <?php if ($post['user_id'] != $_SESSION['user_id']): ?>
+                        <button class="add-user-btn">+</button>
+                    <?php endif; ?>
+                    <div class="post-content-wrapper">
+                        <div class="post-content">
+                            <div class="post-description">
+                                <p><?php echo nl2br(htmlspecialchars($post['description'])); ?></p>
+                            </div>
+                            <?php if (!empty($post['image'])): ?>
+                                <img src="<?php echo htmlspecialchars($post['image']); ?>" alt="Image du post">
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+
+            <!-- Bouton flottant pour créer un post -->
+            <div class="floating-button-container">
+                <span class="floating-button-text">Ajouter un post</span>
+                <a href="create_post.php" class="floating-button">
+                    <img src="images/poster.png" alt="Créer un post">
+                </a>
+            </div>
+        </section>
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <div class="contact-info">
+                <h3>Contactez-nous</h3>
+                <p>Email: <a href="mailto:info@ecein.com">info@ecein.com</a></p>
+                <p>Téléphone: +33 1 23 45 67 89</p>
+                <p>Adresse: 10 Rue de l'Exemple, 75001 Paris, France</p>
+            </div>
+            <div class="navigation-links">
+                <h3>Liens Utiles</h3>
+                <ul>
+                    <li><a href="index.php">Accueil</a></li>
+                    <li><a href="reseau.php">Mon Réseau</a></li>
+                    <li><a href="profil.php">Vous</a></li>
+                    <li><a href="notifications.php">Notifications</a></li>
+                    <li><a href="messagerie.php">Messagerie</a></li>
+                    <li><a href="create_post.php">Emplois</a></li>
+                </ul>
+            </div>
+            <div class="social-icons">
+                <h3>Suivez-nous</h3>
+                <ul>
+                    <li><a href="#">@BeesNetReal<i class="fa fa-facebook"></i></a></li>
+                    <li><a href="#">@BeesNetOfficial<i class="fa fa-twitter"></i></a></li>
+                    <li><a href="#">@BeesNetPro<i class="fa fa-linkedin"></i></a></li>
+                    <li><a href="#">@TheBeesNet<i class="fa fa-instagram"></i></a></li>
+                </ul>
+            </div>
+        </div>
+        <p>&copy; 2024 BeesNet. Tous droits réservés.</p>
+    </footer>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            const floatingButtonContainer = $('.floating-button-container');
+            const contentSection = $('#content-section');
+
+            function updateButtonPosition() {
+                const contentTop = contentSection.offset().top;
+                const contentBottom = contentTop + contentSection.outerHeight();
+                const scrollTop = $(window).scrollTop();
+                const windowHeight = $(window).height();
+
+                if (scrollTop + windowHeight > contentBottom) {
+                    floatingButtonContainer.css({
+                        position: 'absolute',
+                        bottom: '20px'
+                    });
+                } else {
+                    floatingButtonContainer.css({
+                        position: 'fixed',
+                        bottom: '20px'
+                    });
+                }
+            }
+
+            $(window).on('scroll', updateButtonPosition);
+            updateButtonPosition();
+
+            // Envoi de la demande d'ami via AJAX
+            $('.add-user-btn').click(function() {
+                const postFrame = $(this).closest('.post-frame');
+                const userId = postFrame.data('user-id');
+                $.ajax({
+                    url: '',
+                    type: 'POST',
+                    data: {
+                        action: 'send_friend_request',
+                        receiver_id: userId
+                    },
+                    success: function(response) {
+                        const data = JSON.parse(response);
+                        if (data.status === 'success') {
+                            alert('Demande d\'ami envoyée avec succès!');
+                        } else if (data.status === 'already_exists') {
+                            alert('Vous avez déjà envoyé une demande à cet utilisateur.');
+                        } else {
+                            alert('Une erreur s\'est produite. Veuillez réessayer.');
+                        }
+                    }
+                });
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const slides = document.querySelectorAll('.carousel-image');
+            let currentSlide = 0;
+            const nextButton = document.querySelector('.next');
+            const prevButton = document.querySelector('.prev');
+            const events = document.querySelectorAll('section ul li');
+
+            function showSlides() {
+                slides.forEach((slide, index) => {
+                    slide.classList.remove('center');
+                    if (index === currentSlide) {
+                        slide.classList.add('center');
+                    }
+                });
+
+                events.forEach(event => {
+                    event.classList.remove('event-highlight');
+                    if (event.dataset.event == slides[currentSlide].dataset.event) {
+                        event.classList.add('event-highlight');
+                    }
+                });
+            }
+
+            nextButton.addEventListener('click', () => {
+                currentSlide = (currentSlide + 1) % slides.length;
+                showSlides();
+            });
+
+            prevButton.addEventListener('click', () => {
+                currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+                showSlides();
+            });
+
+            showSlides(); // Initial call to set the first slide
+        });
+    </script>
+</body>
+</html>
