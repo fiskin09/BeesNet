@@ -10,7 +10,7 @@ if ($conn->connect_error) {
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = $_POST['username'];
-    $password = password_hash($_POST['password'], PASSWORD_BCRYPT); // Hachage du mot de passe
+    $password = $_POST['password']; // Mot de passe en clair pour les tests
     $email = $_POST['email'];
 
     // Vérification de l'unicité du nom d'utilisateur
@@ -154,4 +154,3 @@ $conn->close();
 </div>
 </body>
 </html>
-
