@@ -1,63 +1,52 @@
 <?php
-session_start(); // Démarrage de la session pour suivre l'utilisateur connecté
-$message = '';
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header("Location: connexion.php");
+    exit;
+}
 
-// Paramètres de connexion à la base de données
+// Connexion à la base de données
 $conn = new mysqli('localhost', 'root', '', 'beeznet');
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $username = $_POST['username'];
-    $password = $_POST['password']; // Mot de passe en clair pour les tests
-    $email = $_POST['email'];
+$error = '';
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $description = $conn->real_escape_string($_POST['description']);
+    $user_id = $_SESSION['user_id'];
 
-    // Vérification de l'unicité du nom d'utilisateur
-    $stmt = $conn->prepare("SELECT id FROM comptes WHERE username = ?");
-    $stmt->bind_param("s", $username);
-    $stmt->execute();
-    $stmt->store_result();
+    // Définir le répertoire de téléchargement
+    $target_dir = "uploads/";
+    if (!is_dir($target_dir)) {
+        mkdir($target_dir, 0777, true);
+    }
 
-    if ($stmt->num_rows > 0) {
-        $message = 'Nom d\'utilisateur déjà pris.';
-    } else {
-        // Démarrer la transaction
-        $conn->begin_transaction();
-
-        try {
-            // Insertion du nouvel utilisateur
-            $stmt = $conn->prepare("INSERT INTO comptes (username, password, email) VALUES (?, ?, ?)");
-            $stmt->bind_param("sss", $username, $password, $email);
-            if ($stmt->execute()) {
-                // Récupérer l'ID du nouveau compte
-                $new_user_id = $stmt->insert_id;
-
-                // Insérer le profil correspondant
-                $stmt = $conn->prepare("INSERT INTO profils (user_id) VALUES (?)");
-                $stmt->bind_param("i", $new_user_id);
-                $stmt->execute();
-
-                // Valider la transaction
-                $conn->commit();
-
-                // Stocker l'ID de l'utilisateur dans la session
-                $_SESSION['user_id'] = $new_user_id;
-
-                // Redirection vers la page de recherche d'utilisateurs
-                header("Location: index.php");
-                exit;
-            } else {
-                throw new Exception('Erreur lors de la création du compte.');
-            }
-        } catch (Exception $e) {
-            // Annuler la transaction en cas d'erreur
-            $conn->rollback();
-            $message = $e->getMessage();
+    // Upload de l'image
+    $image = null;
+    if (!empty($_FILES['image']['name'])) {
+        $target_file = $target_dir . basename($_FILES['image']['name']);
+        if (move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
+            $image = $target_file;
+        } else {
+            $error = "Désolé, une erreur s'est produite lors du téléchargement de votre fichier.";
         }
     }
-    $stmt->close();
+
+    if (empty($error)) {
+        // Insertion du post dans la base de données
+        $stmt = $conn->prepare("INSERT INTO posts (user_id, description, image) VALUES (?, ?, ?)");
+        $stmt->bind_param("iss", $user_id, $description, $image);
+        if ($stmt->execute()) {
+            header("Location: index.php");
+            exit;
+        } else {
+            $error = "Erreur lors de la création du post.";
+        }
+        $stmt->close();
+    }
 }
+
 $conn->close();
 ?>
 
@@ -66,91 +55,79 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Créer un compte - BeesNet</title>
+    <title>Créer un post</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: Oswald, sans-serif;
-            line-height: 1.6;
+            font-family: 'Roboto', sans-serif;
+            background-color: #ffbd49;
             margin: 0;
             padding: 0;
-            background-color: #ffbd49;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
         }
         .container {
-            background-color: #FFFFFF;
-            color: #ffbd49;
+            background-color: #fff;
+            border-radius: 10px;
             padding: 20px;
-            border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            max-width: 400px;
+            max-width: 500px;
             width: 100%;
         }
         h1 {
-            font-family: 'Lobster', sans-serif;
-            margin-bottom: 20px;
+            text-align: center;
+            color: #ffbd49;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
         }
         label {
-            display: block;
-            margin-bottom: 8px;
-            text-align: left;
+            margin-top: 10px;
+            color: #333;
         }
         input[type="text"],
-        input[type="password"],
-        input[type="email"] {
-            width: calc(100% - 20px);
+        textarea {
             padding: 10px;
-            margin-bottom: 10px;
             border: 1px solid #ccc;
-            border-radius: 4px;
+            border-radius: 5px;
+            margin-top: 5px;
         }
-        input[type="submit"] {
+        input[type="file"] {
+            margin-top: 10px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
             background-color: #ffbd49;
             color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
+            font-size: 16px;
             cursor: pointer;
-            transition: background-color 0.3s ease;
         }
-        input[type="submit"]:hover {
-            background-color: #e5a837;
-        }
-        p {
-            margin-top: 20px;
-        }
-        a {
-            color: #ffbd49;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
+        .error {
+            color: red;
+            margin-top: 10px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <h1>Créer un compte</h1>
-    <form method="POST">
-        <label for="username">Nom d'utilisateur:</label>
-        <input type="text" id="username" name="username" required>
-
-        <label for="password">Mot de passe:</label>
-        <input type="password" id="password" name="password" required>
-
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email" required>
-
-        <input type="submit" value="Créer un compte">
-    </form>
-    <?php if ($message !== '') echo "<p>$message</p>"; ?>
-    <p>Vous avez déjà un compte? <a href="connexion.php">Connectez-vous</a></p>
-</div>
+    <div class="container">
+        <h1>Créer un post</h1>
+        <?php if (!empty($error)): ?>
+            <div class="error"><?php echo htmlspecialchars($error); ?></div>
+        <?php endif; ?>
+        <form action="create_post.php" method="post" enctype="multipart/form-data">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="4" required></textarea>
+            <label for="image">Image</label>
+            <input type="file" id="image" name="image">
+            <button type="submit">Publier</button>
+        </form>
+    </div>
 </body>
 </html>
