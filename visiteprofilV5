@@ -236,8 +236,8 @@ $conn->close();
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin: 20px 0; /* Ajoute une marge verticale pour l'espacement */
             height: 200px; /* Hauteur fixe pour un carré */
-            display: flex;
-            justify-content: space-between;
+            text-align: left; /* Aligner le texte à gauche */
+
         }
 
         .friends-section {
