@@ -27,6 +27,14 @@ $unread_messages_result = $unread_messages_stmt->get_result();
 $unread_messages_count = $unread_messages_result->fetch_assoc()['unread_messages'];
 $unread_messages_stmt->close();
 
+// Récupérer la photo de profil
+$photo_stmt = $conn->prepare("SELECT photo FROM Profils WHERE user_id = ?");
+$photo_stmt->bind_param("i", $_SESSION['user_id']);
+$photo_stmt->execute();
+$photo_result = $photo_stmt->get_result();
+$photo = $photo_result->fetch_assoc()['photo'];
+$photo_stmt->close();
+
 // Gérer la requête AJAX pour envoyer une demande d'ami
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['action'] == 'send_friend_request') {
     $receiver_id = $_POST['receiver_id'];
@@ -518,6 +526,21 @@ nav a.active span {
     color: #FFBD49;
     margin-left: 5px;
 }
+.profile-icon {
+    width: 32px; /* Modifiez cette valeur pour ajuster la largeur */
+    height: 32px; /* Modifiez cette valeur pour ajuster la hauteur */
+    border-radius: 50%; /* Pour rendre l'image circulaire */
+    object-fit: cover; /* Pour s'assurer que l'image couvre bien la zone */
+}
+        .map-container iframe {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            border: 0;
+            border-radius: 10%;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+
+        }
 
     </style>
 </head>
@@ -531,7 +554,16 @@ nav a.active span {
     <ul>
         <li><a href="index.php" class="active"><img src="images/home.png" alt="Accueil"><span>Accueil</span></a></li>
         <li><a href="reseau.php"><img src="images/network.png" alt="Mon Réseau"><span>Mon Réseau</span></a></li>
-        <li><a href="profil.php"><img src="images/user.png" alt="Vous"><span>Vous</span></a></li>
+                                        <li>
+    <a href="profil.php">
+        <?php if ($photo !== 'uploads/nobody.jpg'): ?>
+            <img src="<?php echo htmlspecialchars($photo); ?>" alt="Vous" class="profile-icon">
+        <?php else: ?>
+            <img src="images/user.png" alt="Vous">
+        <?php endif; ?>
+        <span>Vous</span>
+    </a>
+</li>
         <li>
             <a href="notifications.php">
                 <img src="images/notifications.png" alt="Notifications">
@@ -617,7 +649,6 @@ nav a.active span {
     </div>
 </div>
 
-
             <?php endforeach; ?>
 
             <!-- Bouton flottant pour créer un post -->
@@ -649,6 +680,19 @@ nav a.active span {
                     <li><a href="create_post.php">Emplois</a></li>
                 </ul>
             </div>
+                                    <div class="map-container">
+            <h3>Notre Localisation</h3>
+            
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1702.348579769713!2d2.288825889794443!3d48.85095911333639!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47e6701b4f58251b%3A0x167f5a60fb94aa76!2sECE%20-%20Ecole%20d&#39;ing%C3%A9nieurs%20-%20Campus%20de%20Paris!5e0!3m2!1sfr!2sfr!4v1717342507157!5m2!1sfr!2sfr" 
+            width="600" 
+            height="450" 
+            style="border:0;" 
+            allowfullscreen="" 
+            loading="lazy" 
+            referrerpolicy="no-referrer-when-downgrade">
+            </iframe>
+            
+        </div>
             <div class="social-icons">
                 <h3>Suivez-nous</h3>
                 <ul>
