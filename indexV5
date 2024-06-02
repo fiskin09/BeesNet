@@ -617,8 +617,8 @@ nav a.active span {
     <!-- Section Introduction -->
     <header>
         <h1>Bienvenue sur BeesNet, <?php echo htmlspecialchars($user['username']); ?> !</h1>
-        <p>Connectez-vous avec votre réseau professionnel et découvrez des opportunités.</p>
-        <p>Session active de <?php echo htmlspecialchars($user['username']); ?></p>
+        <p>Découvrez Beesnet, le réseau social dédié aux professionnels, inspiré par l'efficacité et l'organisation des abeilles, où les échanges et collaborations bourdonnent de succès.</p>
+
     </header>
 
     <!-- Carrousel d'images -->
