@@ -1,0 +1,502 @@
+<?php
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header('Location: connexion.php');
+    exit;
+}
+
+$conn = new mysqli('localhost', 'root', '', 'beeznet');
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+// Compter les demandes d'ami en attente
+$request_stmt = $conn->prepare("SELECT COUNT(*) as pending_requests FROM FriendRequests WHERE receiver_id = ? AND status = 'pending'");
+$request_stmt->bind_param("i", $_SESSION['user_id']);
+$request_stmt->execute();
+$request_result = $request_stmt->get_result();
+$request_count = $request_result->fetch_assoc()['pending_requests'];
+$request_stmt->close();
+
+// Récupérer la liste des amis
+$friends = [];
+$stmt = $conn->prepare("SELECT c.id, c.username FROM FriendRequests f JOIN Comptes c ON (c.id = f.receiver_id OR c.id = f.sender_id) WHERE (f.sender_id = ? OR f.receiver_id = ?) AND f.status = 'accepted' AND c.id <> ?");
+$stmt->bind_param("iii", $_SESSION['user_id'], $_SESSION['user_id'], $_SESSION['user_id']);
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $friends[] = $row;
+}
+$stmt->close();
+
+// Récupérer les messages si un ami est sélectionné
+$messages = [];
+if (isset($_GET['friend_id'])) {
+    $friend_id = $_GET['friend_id'];
+    $stmt = $conn->prepare("SELECT m.*, c.username AS sender_name FROM Messages m JOIN Comptes c ON m.sender_id = c.id WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?) ORDER BY m.timestamp ASC");
+    $stmt->bind_param("iiii", $_SESSION['user_id'], $friend_id, $friend_id, $_SESSION['user_id']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $messages[] = $row;
+    }
+    $stmt->close();
+
+    // Marquer les messages comme lus
+    $stmt = $conn->prepare("UPDATE Messages SET is_read = TRUE WHERE sender_id = ? AND receiver_id = ? AND is_read = FALSE");
+    $stmt->bind_param("ii", $friend_id, $_SESSION['user_id']);
+    $stmt->execute();
+    $stmt->close();
+}
+
+// Gérer l'envoi de message
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['receiver_id']) && isset($_POST['message'])) {
+    $receiver_id = $_POST['receiver_id'];
+    $message = $_POST['message'];
+    $sender_id = $_SESSION['user_id'];
+    
+    $stmt = $conn->prepare("INSERT INTO Messages (sender_id, receiver_id, message, timestamp, is_read) VALUES (?, ?, ?, NOW(), FALSE)");
+    $stmt->bind_param("iis", $sender_id, $receiver_id, $message);
+    $stmt->execute();
+    $stmt->close();
+
+    // Enregistrer la notification pour le destinataire du message
+    $notification_msg = $_SESSION['username'] . " vous a envoyé un message";
+    $stmt = $conn->prepare("INSERT INTO Notifications (user_id, message) VALUES (?, ?)");
+    $stmt->bind_param("is", $sender_id, $notification_msg);
+    $stmt->execute();
+    $stmt->close();
+    
+    $success_message = "Message envoyé avec succès!";
+    
+    // Rediriger pour éviter la réémission du formulaire
+    header("Location: messagerie.php?friend_id=" . $receiver_id);
+    exit;
+}
+
+$conn->close();
+?>
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messagerie - BeesNet</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <style>
+body {
+    font-family: 'Roboto', sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background-color: #E5E7E9;
+    color: #000;
+    background-size: 25%;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+nav {
+    background-color: #ffbd49;
+    color: black;
+    text-align: center;
+    padding: 7px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+nav ul {
+    list-style-type: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Center the navigation items */
+    flex: 1; /* Allow it to take the remaining space */
+}
+nav ul li {
+    margin-right: 20px;
+    position: relative;
+}
+nav a {
+    text-decoration: none;
+    color: black;
+    padding: 7px 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: color 0.3s;
+}
+nav a img {
+    width: 24px;
+    height: 24px;
+    display: block;
+    transition: opacity 0.3s;
+}
+nav a span {
+    display: none;
+    margin-top: 5px;
+    transition: opacity 0.3s;
+}
+nav a:hover span {
+    display: block;
+}
+nav a.active {
+    font-size: 1.2em; /* Agrandir l'icône et le texte */
+}
+nav a.active img {
+    width: 28px; /* Augmenter la taille de l'icône */
+    height: 28px; /* Augmenter la taille de l'icône */
+}
+nav a.active span {
+    display: block; /* Garder le texte toujours visible */
+    opacity: 1; /* Rendre le texte complètement visible */
+}
+.notification-badge {
+    display: inline-block !important; /* Assurez-vous que la pastille est toujours visible */
+    position: absolute;
+    top: -10px;  /* Ajustez cette valeur pour écarter verticalement */
+    right: -10px;  /* Ajustez cette valeur pour écarter horizontalement */
+    background: red;
+    color: white;
+    border-radius: 50%;
+    padding: 3px 6px;  /* Diminuez cette valeur pour réduire la taille */
+    font-size: 10px;  /* Diminuez cette valeur pour réduire la taille de la police */
+}
+.logo {
+    height: 85px; /* Ajustez la taille du logo selon vos besoins */
+    width: 85px;
+    margin-left: -20px;
+}
+.logo-container {
+    display: flex;
+    align-items: center;
+    margin-left: 20px;
+}
+.logo-text {
+    font-family: 'Lobster', sans-serif;
+    margin-left: 10px; /* Espace entre le logo et le texte */
+    font-size: 24px; /* Ajustez la taille du texte selon vos besoins */
+}
+h1 {
+    background-image: url('images/imageback.jpg');
+    border-radius: 10px 10px 10px 10px; /* haut gauche, haut droit, bas droit, bas gauche */
+    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.25); /* Ombre modérément légère */
+    background-size: 30%; /* L'image prendra toute la largeur ou la hauteur disponible, tout en conservant ses proportions */
+    background-position: center; /* L'image sera centrée */
+    background-repeat: repeat; /* L'image ne se répétera pas */
+    color: black;
+    height: auto; /* Ajustez cette valeur selon la hauteur souhaitée pour l'élément h1 */
+    margin-top: 10px; /* Réduisez la marge supérieure du h1 */
+    margin-bottom: 10px; /* Réduisez la marge inférieure du h1 */
+    font-family: 'Lobster', sans-serif;
+    text-align: center;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 60px);
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.content {
+    display: flex;
+    flex: 1;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.messages-list {
+    width: 25%;
+    border-right: 1px solid #ccc;
+    overflow-y: auto;
+    padding: 20px;
+    background: #f1f1f1;
+}
+
+.message-thread-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+}
+
+.message-thread {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    
+}
+
+.message-item {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: 8px;
+    background: #e5e5e5;
+    transition: background 0.3s;
+    text-align: center;
+}
+
+.message-item:hover {
+    background: #ffbd49;
+}
+
+.active-friend {
+    background-color: #ffbd49;
+}
+
+.message-content {
+    display: flex;
+    align-items: center;
+}
+
+.message-content img {
+    margin-right: 10px;
+}
+
+.message-text {
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.sent-message {
+    background: #FCF3CF;
+}
+
+.received-message {
+    background: #F2F3F4;
+}
+
+.message-input {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-top: 1px solid #ccc;
+    background: #f1f1f1;
+}
+
+.message-input textarea {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    margin-right: 10px;
+    resize: none;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    height: 25px; /* Ajustez cette valeur pour la hauteur de la zone de texte */
+    width: 900px;
+}
+
+.message-input button {
+    background: #ffbd49;
+    color: black;
+    padding: 15px 20px;
+    height: 55px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative; /* Position relative pour le positionnement absolu du texte */
+}
+
+.message-input button img {
+    width: 28px; /* Ajustez la taille de l'icône selon vos besoins */
+    height: 28px;
+    transition: opacity 0.3s; /* Ajoutez une transition pour rendre la disparition plus fluide */
+}
+
+.message-input button:hover img {
+    opacity: 1; /* Garder l'image visible */
+}
+
+.message-input button:hover {
+    background: #e5a937;
+}
+
+.message-selection {
+    text-align: center;
+    font-family: 'Oswald', sans-serif;
+}
+
+.footer {
+    background-color: #ffbd49;
+    color: black;
+    text-align: center;
+    padding: 20px 0;
+    margin-top: 20px;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+}
+
+.footer-content div {
+    flex: 1;
+    padding: 10px;
+    min-width: 200px;
+}
+
+.footer-content h3 {
+    margin-top: 0;
+    color: black;
+}
+
+.footer a {
+    color: black;
+    text-decoration: none;
+}
+
+.footer a:hover {
+    text-decoration: underline;
+}
+
+.social-icons ul {
+    list-style: none;
+    padding: 0;
+}
+
+.social-icons li {
+    margin: 5px 0;
+}
+
+.social-icons a {
+    text-decoration: none;
+    color: black;
+}
+
+.social-icons i {
+    margin-left: 5px;
+}
+
+
+        
+    </style>
+    <script>
+        function showConversation(friendId) {
+            window.location.href = 'messagerie.php?friend_id=' + friendId;
+        }
+    </script>
+</head>
+<body>
+    <!-- Barre de navigation -->
+<nav>
+    <div class="logo-container">
+        <a href="index.php"><img src="images/logo.png" alt="Logo de l'entreprise" class="logo"></a>
+        <span class="logo-text"><strong>BeesNet</strong></span>
+    </div>
+    <ul>
+        <li><a href="index.php"><img src="images/home.png" alt="Accueil"><span>Accueil</span></a></li>
+        <li><a href="reseau.php"><img src="images/network.png" alt="Mon Réseau"><span>Mon Réseau</span></a></li>
+        <li><a href="profil.php"><img src="images/user.png" alt="Vous"><span>Vous</span></a></li>
+                <li>
+            <a href="notifications.php">
+                <img src="images/notifications.png" alt="Notifications">
+                <span>Notifications</span>
+                <?php if ($request_count > 0): ?>
+                    <span class="notification-badge"><?php echo $request_count; ?></span>
+                <?php endif; ?>
+            </a>
+        </li>
+        <li><a href="messagerie.php" class="active"><img src="images/messages.png" alt="Messagerie"><span>Messagerie</span></a></li>
+        <li><a href="emplois.php"><img src="images/jobs.png" alt="Emplois"><span>Emplois</span></a></li>
+    </ul>
+    <a href="connexion.php" style="float:right;"><img src="images/deco.png" alt="Déconnexion"><span>Déconnexion</span></a>
+</nav>
+
+
+    <!-- Titre Messagerie -->
+    <h1>Messagerie</h1>
+
+    <!-- Contenu principal -->
+    <div class="container">
+        <!-- Messages Content -->
+        <div class="content">
+            <!-- Messages List -->
+            <div class="messages-list">
+                <?php foreach ($friends as $friend): ?>
+                    <div class="message-item <?php echo isset($friend_id) && $friend['id'] == $friend_id ? 'active-friend' : ''; ?>" onclick="showConversation(<?php echo $friend['id']; ?>)">
+                        <p><strong><?php echo htmlspecialchars($friend['username']); ?></strong></p>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <!-- Message Thread and Input -->
+            <div class="message-thread-container">
+                <div class="message-thread">
+                    <?php if (isset($messages) && count($messages) > 0): ?>
+                        <?php foreach ($messages as $message): ?>
+                            <div class="message-item <?php echo $message['sender_id'] == $_SESSION['user_id'] ? 'sent-message' : 'received-message'; ?>">
+                                <div class="message-content">
+                                    <p><strong><?php echo htmlspecialchars($message['sender_name']); ?>:</strong></p>
+                                    <p class="message-text"><?php echo htmlspecialchars($message['message']); ?></p>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="message-selection">
+                        <h3>Sélectionnez un ami pour voir la conversation.</h3>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <!-- Message Input -->
+                <?php if (isset($friend_id)): ?>
+<div class="message-input">
+    <form method="POST">
+        <input type="hidden" name="receiver_id" value="<?php echo $friend_id; ?>">
+        <textarea name="message" rows="2" placeholder="Écrire un nouveau message" required></textarea>
+        <button type="submit"><img src="images/avion.png" alt="Envoyer"></button>
+    </form>
+</div>
+
+
+                <?php endif; ?>
+                <?php if (isset($success_message)): ?>
+                    <p style="color: green;"><?php echo $success_message; ?></p>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pied de page -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="contact-info">
+                <h3>Contactez-nous</h3>
+                <p>Email: <a href="mailto:info@ecein.com">info@ecein.com</a></p>
+                <p>Téléphone: +33 1 23 45 67 89</p>
+                <p>Adresse: 10 Rue de l'Exemple, 75001 Paris, France</p>
+            </div>
+            <div class="navigation-links">
+                <h3>Liens Utiles</h3>
+                <ul>
+                    <li><a href="index.php">Accueil</a></li>
+                    <li><a href="mon-reseau.php">Mon Réseau</a></li>
+                    <li><a href="profil.php">Vous</a></li>
+                    <li><a href="notifications.php">Notifications</a></li>
+                    <li><a href="messagerie.php">Messagerie</a></li>
+                    <li><a href="emplois.php">Emplois</a></li>
+                </ul>
+            </div>
+            <div class="social-icons">
+                <h3>Suivez-nous</h3>
+                <ul>
+                    <li><a href="#">@BeesNetReal<i class="fa fa-facebook"></i></a></li>
+                    <li><a href="#">@BeesNetOfficial<i class</a></li>
+                    <li><a href="#">@BeesNetPro<i class="fa fa-linkedin"></i></a></li>
+                    <li><a href="#">@TheBeesNet<i class="fa fa-instagram"></i></a></li>
+                </ul>
+            </div>
+        </div>
+        <p>&copy; 2024 BeesNet. Tous droits réservés.</p>
+    </footer>
+</body>
+</html>
+    
