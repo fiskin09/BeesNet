@@ -39,6 +39,22 @@ if ($user_id === 0) {
     echo "Utilisateur non spécifié!";
     exit;
 }
+// Récupération des amis de l'utilisateur visité
+$friends_stmt = $conn->prepare("
+    SELECT c.id, c.username, p.photo FROM comptes c
+    JOIN FriendRequests f ON (f.receiver_id = c.id OR f.sender_id = c.id)
+    LEFT JOIN profils p ON c.id = p.user_id
+    WHERE (f.receiver_id = ? OR f.sender_id = ?) AND f.status = 'accepted'
+    AND c.id <> ?
+");
+$friends_stmt->bind_param("iii", $user_id, $user_id, $user_id);
+$friends_stmt->execute();
+$friends_result = $friends_stmt->get_result();
+$visitor_friends = [];
+while ($friend = $friends_result->fetch_assoc()) {
+    $visitor_friends[] = $friend;
+}
+$friends_stmt->close();
 
 $stmt = $conn->prepare("
     SELECT c.username, c.email AS email_compte, p.photo, p.nom, p.prenom, p.formations, p.projets, p.experiences, p.etudes_en_cours, p.habitation, p.date_de_naissance, p.centre_d_interet, p.biographie,
@@ -220,7 +236,20 @@ $conn->close();
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin: 20px 0; /* Ajoute une marge verticale pour l'espacement */
             height: 200px; /* Hauteur fixe pour un carré */
+            display: flex;
+            justify-content: space-between;
         }
+
+        .friends-section {
+            background: white;
+            width: calc(100% - 40px); /* Ajuste la largeur pour correspondre aux autres sections */
+            display: flex;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+
         /* Posts */
         .posts-section {
             margin-top: 20px;
@@ -340,61 +369,61 @@ $conn->close();
             margin-right: 20px;
             position: relative;
         }
-nav {
-    background-color: #ffbd49;
-    color: black;
-    text-align: center;
-    padding: 7px 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-nav ul {
-    list-style-type: none;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center; /* Center the navigation items */
-    flex: 1; /* Allow it to take the remaining space */
-}
-nav ul li {
-    margin-right: 20px;
-    position: relative;
-}
-nav a {
-    text-decoration: none;
-    color: black;
-    padding: 7px 15px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    transition: color 0.3s;
-}
-nav a img {
-    width: 24px;
-    height: 24px;
-    display: block;
-    transition: opacity 0.3s;
-}
-nav a span {
-    display: none;
-    margin-top: 5px;
-    transition: opacity 0.3s;
-}
-nav a:hover span {
-    display: block;
-}
-nav a.active {
-    font-size: 1.2em; /* Agrandir l'icône et le texte */
-}
-nav a.active img {
-    width: 28px; /* Augmenter la taille de l'icône */
-    height: 28px; /* Augmenter la taille de l'icône */
-}
-nav a.active span {
-    display: block; /* Garder le texte toujours visible */
-    opacity: 1; /* Rendre le texte complètement visible */
-}
+        nav {
+            background-color: #ffbd49;
+            color: black;
+            text-align: center;
+            padding: 7px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        nav ul {
+            list-style-type: none;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Center the navigation items */
+            flex: 1; /* Allow it to take the remaining space */
+        }
+        nav ul li {
+            margin-right: 20px;
+            position: relative;
+        }
+        nav a {
+            text-decoration: none;
+            color: black;
+            padding: 7px 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        nav a img {
+            width: 24px;
+            height: 24px;
+            display: block;
+            transition: opacity 0.3s;
+        }
+        nav a span {
+            display: none;
+            margin-top: 5px;
+            transition: opacity 0.3s;
+        }
+        nav a:hover span {
+            display: block;
+        }
+        nav a.active {
+            font-size: 1.2em; /* Agrandir l'icône et le texte */
+        }
+        nav a.active img {
+            width: 28px; /* Augmenter la taille de l'icône */
+            height: 28px; /* Augmenter la taille de l'icône */
+        }
+        nav a.active span {
+            display: block; /* Garder le texte toujours visible */
+            opacity: 1; /* Rendre le texte complètement visible */
+        }
         .logo {
             height: 85px; /* Ajustez la taille du logo selon vos besoins */
             width: 85px;
@@ -411,31 +440,32 @@ nav a.active span {
             font-size: 24px; /* Ajustez la taille du texte selon vos besoins */
         }
         .map-container iframe {
-    width: 100%;
-    max-width: 400px;
-    height: 300px;
-    border: 0;
-    border-radius: 10%;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            border: 0;
+            border-radius: 10%;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 
-}
-.notification-badge {
-    display: inline-block; /* Assurez-vous que la pastille est toujours visible */
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: red;
-    color: white;
-    border-radius: 50%;
-    padding: 3px 6px;
-    font-size: 12px;
-}
-        .profile-icon {
+        }
+        .notification-badge {
+            display: inline-block; /* Assurez-vous que la pastille est toujours visible */
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: red;
+            color: white;
+            border-radius: 50%;
+            padding: 3px 6px;
+            font-size: 12px;
+        }
+.profile-icon {
     width: 32px; /* Modifiez cette valeur pour ajuster la largeur */
     height: 32px; /* Modifiez cette valeur pour ajuster la hauteur */
     border-radius: 50%; /* Pour rendre l'image circulaire */
     object-fit: cover; /* Pour s'assurer que l'image couvre bien la zone */
 }
+
 
     </style>
     <script>
@@ -459,7 +489,7 @@ nav a.active span {
     <ul>
         <li><a href="index.php"><img src="images/home.png" alt="Accueil"><span>Accueil</span></a></li>
         <li><a href="reseau.php" class="active"><img src="images/network.png" alt="Mon Réseau"><span>Mon Réseau</span></a></li>
-                        <li>
+                                <li>
     <a href="profil.php">
         <?php if ($photo !== 'uploads/nobody.jpg'): ?>
             <img src="<?php echo htmlspecialchars($photo); ?>" alt="Vous" class="profile-icon">
@@ -537,6 +567,25 @@ nav a.active span {
                 <h3>Centres d'intérêt</h3>
                 <p><?php echo nl2br(htmlspecialchars($profile['centre_d_interet'] ?? '')); ?></p>
             </div>
+
+            <!-- Affichage des amis de l'utilisateur visité -->
+            <div class="friends-section">
+                <h3>Amis de <?php echo htmlspecialchars($profile['username']); ?></h3>
+                <ul>
+                    <?php foreach ($visitor_friends as $friend): ?>
+                        <li>
+                            <img src="<?php echo htmlspecialchars($friend['photo'] ?? 'default_photo.jpg'); ?>" alt="Photo de profil de <?php echo htmlspecialchars($friend['username']); ?>" style="width: 50px; height: 50px;">
+                            <a href="visiteprofil.php?user_id=<?php echo $friend['id']; ?>">
+                                <?php echo htmlspecialchars($friend['username']); ?>
+                            </a>
+                        </li>
+                    <?php endforeach; ?>
+                    <?php if (empty($visitor_friends)): ?>
+                        <li>Pas d'amis à afficher.</li>
+                    <?php endif; ?>
+                </ul>
+            </div>
+
             <?php endif; ?>
         </form>
         <?php if ($is_friend && !empty($posts)): ?>
@@ -573,12 +622,12 @@ nav a.active span {
             <div class="navigation-links">
                 <h3>Liens Utiles</h3>
                 <ul>
-                    <li><a href="index.php">Accueil</a></li>
-                    <li><a href="mon-reseau.php">Mon Réseau</a></li>
-                    <li><a href="profil.php">Vous</a></li>
-                    <li><a href="notifications.php">Notifications</a></li>
-                    <li><a href="messagerie.php">Messagerie</a></li>
-                    <li><a href="emplois.php">Emplois</a></li>
+                    <li><a href="index.html">Accueil</a></li>
+                    <li><a href="mon-reseau.html">Mon Réseau</a></li>
+                    <li><a href="visiteprofil.php">Vous</a></li>
+                    <li><a href="notifications.html">Notifications</a></li>
+                    <li><a href="messagerie.html">Messagerie</a></li>
+                    <li><a href="emplois.html">Emplois</a></li>
                 </ul>
             </div>
                         <div class="map-container">
