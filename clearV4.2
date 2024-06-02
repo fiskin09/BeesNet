@@ -1,0 +1,176 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Hôte : 127.0.0.1:3306
+-- Généré le : dim. 02 juin 2024 à 17:11
+-- Version du serveur : 8.2.0
+-- Version de PHP : 8.2.13
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Base de données : `beeznet`
+--
+
+-- Truncate toutes les tables pour réinitialiser les auto-incréments
+
+TRUNCATE TABLE `comptes`;
+TRUNCATE TABLE `friendrequests`;
+TRUNCATE TABLE `likes`;
+TRUNCATE TABLE `messages`;
+TRUNCATE TABLE `notifications`;
+TRUNCATE TABLE `posts`;
+TRUNCATE TABLE `profils`;
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `comptes`
+--
+
+DROP TABLE IF EXISTS `comptes`;
+CREATE TABLE IF NOT EXISTS `comptes` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `username` varchar(20) NOT NULL,
+  `email` varchar(50) NOT NULL,
+  `password` varchar(20) NOT NULL,
+  `administrateur` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `username` (`username`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Insertion des données dans la table `comptes`
+INSERT INTO `comptes` (`id`, `username`, `email`, `password`, `administrateur`) VALUES
+(1, 'admin', 'admin@beeznet.com', 'adminpassword', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `friendrequests`
+--
+
+DROP TABLE IF EXISTS `friendrequests`;
+CREATE TABLE IF NOT EXISTS `friendrequests` (
+  `request_id` int NOT NULL AUTO_INCREMENT,
+  `sender_id` int DEFAULT NULL,
+  `receiver_id` int DEFAULT NULL,
+  `status` enum('pending','accepted','declined','blocked') DEFAULT 'pending',
+  `request_date` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`request_id`),
+  KEY `sender_id` (`sender_id`),
+  KEY `receiver_id` (`receiver_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `likes`
+--
+
+DROP TABLE IF EXISTS `likes`;
+CREATE TABLE IF NOT EXISTS `likes` (
+  `like_id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `post_id` int NOT NULL,
+  PRIMARY KEY (`like_id`),
+  KEY `user_id` (`user_id`),
+  KEY `post_id` (`post_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `messages`
+--
+
+DROP TABLE IF EXISTS `messages`;
+CREATE TABLE IF NOT EXISTS `messages` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `sender_id` int NOT NULL,
+  `receiver_id` int NOT NULL,
+  `message` text NOT NULL,
+  `timestamp` datetime DEFAULT CURRENT_TIMESTAMP,
+  `is_read` tinyint(1) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `sender_id` (`sender_id`),
+  KEY `receiver_id` (`receiver_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `notifications`
+--
+
+DROP TABLE IF EXISTS `notifications`;
+CREATE TABLE IF NOT EXISTS `notifications` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `message` varchar(255) NOT NULL,
+  `is_read` tinyint(1) DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `posts`
+--
+
+DROP TABLE IF EXISTS `posts`;
+CREATE TABLE IF NOT EXISTS `posts` (
+  `post_id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `description` text NOT NULL,
+  `image` varchar(255) DEFAULT NULL,
+  `post_date` datetime DEFAULT CURRENT_TIMESTAMP,
+  `repost_id` int DEFAULT NULL,
+  `theme` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`post_id`),
+  KEY `user_id` (`user_id`),
+  KEY `repost_id` (`repost_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `profils`
+--
+
+DROP TABLE IF EXISTS `profils`;
+CREATE TABLE IF NOT EXISTS `profils` (
+  `user_id` int NOT NULL,
+  `photo` varchar(255) DEFAULT NULL,
+  `nom` varchar(15) DEFAULT NULL,
+  `prenom` varchar(15) DEFAULT NULL,
+  `formations` text,
+  `projets` text,
+  `experiences` text,
+  `etudes_en_cours` varchar(100) DEFAULT NULL,
+  `habitation` varchar(100) DEFAULT NULL,
+  `date_de_naissance` date DEFAULT NULL,
+  `centre_d_interet` text,
+  `biographie` text,
+  PRIMARY KEY (`user_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Insertion des données dans la table `profils`
+INSERT INTO `profils` (`user_id`, `photo`, `nom`, `prenom`, `formations`, `projets`, `experiences`, `etudes_en_cours`, `habitation`, `date_de_naissance`, `centre_d_interet`, `biographie`) VALUES
+(1, 'uploads/admin.jpg', 'Admin', 'User', 'MBA', 'Project X', '5 years of experience', 'MIT', '123 Admin St', '1980-01-01', 'Reading, Coding', 'Administrator of Beeznet');
+
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
