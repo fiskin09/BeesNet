@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le : dim. 02 juin 2024 à 17:00
+-- Généré le : dim. 02 juin 2024 à 17:11
 -- Version du serveur : 8.2.0
 -- Version de PHP : 8.2.13
 
@@ -19,8 +19,6 @@ SET time_zone = "+00:00";
 --
 -- Base de données : `beeznet`
 --
-
--- --------------------------------------------------------
 
 -- Truncate toutes les tables pour réinitialiser les auto-incréments
 
@@ -44,6 +42,7 @@ CREATE TABLE IF NOT EXISTS `comptes` (
   `username` varchar(20) NOT NULL,
   `email` varchar(50) NOT NULL,
   `password` varchar(20) NOT NULL,
+  `administrateur` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `email` (`email`)
