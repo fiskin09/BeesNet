@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le : ven. 31 mai 2024 à 17:26
+-- Généré le : dim. 02 juin 2024 à 17:00
 -- Version du serveur : 8.2.0
 -- Version de PHP : 8.2.13
 
@@ -20,6 +20,8 @@ SET time_zone = "+00:00";
 -- Base de données : `beeznet`
 --
 
+-- --------------------------------------------------------
+
 -- Truncate toutes les tables pour réinitialiser les auto-incréments
 
 TRUNCATE TABLE `comptes`;
@@ -32,7 +34,11 @@ TRUNCATE TABLE `profils`;
 
 -- --------------------------------------------------------
 
+--
 -- Structure de la table `comptes`
+--
+
+DROP TABLE IF EXISTS `comptes`;
 CREATE TABLE IF NOT EXISTS `comptes` (
   `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(20) NOT NULL,
@@ -41,9 +47,15 @@ CREATE TABLE IF NOT EXISTS `comptes` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- --------------------------------------------------------
+
+--
 -- Structure de la table `friendrequests`
+--
+
+DROP TABLE IF EXISTS `friendrequests`;
 CREATE TABLE IF NOT EXISTS `friendrequests` (
   `request_id` int NOT NULL AUTO_INCREMENT,
   `sender_id` int DEFAULT NULL,
@@ -53,9 +65,31 @@ CREATE TABLE IF NOT EXISTS `friendrequests` (
   PRIMARY KEY (`request_id`),
   KEY `sender_id` (`sender_id`),
   KEY `receiver_id` (`receiver_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `likes`
+--
+
+DROP TABLE IF EXISTS `likes`;
+CREATE TABLE IF NOT EXISTS `likes` (
+  `like_id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `post_id` int NOT NULL,
+  PRIMARY KEY (`like_id`),
+  KEY `user_id` (`user_id`),
+  KEY `post_id` (`post_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Structure de la table `messages`
+--
+
+DROP TABLE IF EXISTS `messages`;
 CREATE TABLE IF NOT EXISTS `messages` (
   `id` int NOT NULL AUTO_INCREMENT,
   `sender_id` int NOT NULL,
@@ -66,9 +100,15 @@ CREATE TABLE IF NOT EXISTS `messages` (
   PRIMARY KEY (`id`),
   KEY `sender_id` (`sender_id`),
   KEY `receiver_id` (`receiver_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- --------------------------------------------------------
+
+--
 -- Structure de la table `notifications`
+--
+
+DROP TABLE IF EXISTS `notifications`;
 CREATE TABLE IF NOT EXISTS `notifications` (
   `id` int NOT NULL AUTO_INCREMENT,
   `user_id` int NOT NULL,
@@ -77,21 +117,35 @@ CREATE TABLE IF NOT EXISTS `notifications` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- --------------------------------------------------------
+
+--
 -- Structure de la table `posts`
+--
+
+DROP TABLE IF EXISTS `posts`;
 CREATE TABLE IF NOT EXISTS `posts` (
   `post_id` int NOT NULL AUTO_INCREMENT,
   `user_id` int NOT NULL,
   `description` text NOT NULL,
   `image` varchar(255) DEFAULT NULL,
   `post_date` datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`post
-_id`),
-  KEY `user_id` (`user_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `repost_id` int DEFAULT NULL,
+  `theme` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`post_id`),
+  KEY `user_id` (`user_id`),
+  KEY `repost_id` (`repost_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- --------------------------------------------------------
+
+--
 -- Structure de la table `profils`
+--
+
+DROP TABLE IF EXISTS `profils`;
 CREATE TABLE IF NOT EXISTS `profils` (
   `user_id` int NOT NULL,
   `photo` varchar(255) DEFAULT NULL,
@@ -105,8 +159,7 @@ CREATE TABLE IF NOT EXISTS `profils` (
   `date_de_naissance` date DEFAULT NULL,
   `centre_d_interet` text,
   `biographie` text,
-  PRIMARY KEY (`user_id`),
-  CONSTRAINT `fk_profils_comptes` FOREIGN KEY (`user_id`) REFERENCES `comptes`(`id`)
+  PRIMARY KEY (`user_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 COMMIT;
